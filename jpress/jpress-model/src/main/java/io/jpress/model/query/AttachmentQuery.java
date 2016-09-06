@@ -30,45 +30,141 @@ import io.jpress.utils.StringUtils;
 
 public class AttachmentQuery extends JBaseQuery {
 
-	private static final Attachment DAO = new Attachment();
+	protected static final Attachment DAO = new Attachment();
 	private static final AttachmentQuery QUERY = new AttachmentQuery();
 
 	public static AttachmentQuery me() {
 		return QUERY;
 	}
 
-	public Page<Attachment> paginate(int pageNumber, int pageSize, String keyword, String month, String mime) {
+	public Page<Attachment> paginate(int pageNumber, int pageSize, BigInteger userId, BigInteger contentId, String type,
+			String flag, String keyword, String month, String mime, String orderBy) {
 
 		StringBuilder fromBuilder = new StringBuilder(" FROM attachment a ");
 		LinkedList<Object> params = new LinkedList<Object>();
 
 		boolean needWhere = true;
 
-		if (StringUtils.isNotBlank(keyword)) {
-			needWhere = appendWhereOrAnd(fromBuilder, needWhere);
-			fromBuilder.append(" a.title like ? ");
-			params.add("%"+keyword + "%");
-		}
-		
+		needWhere = appendIfNotEmpty(fromBuilder, "a.user_id", userId, params, needWhere);
+		needWhere = appendIfNotEmpty(fromBuilder, "a.content_id", contentId, params, needWhere);
+		needWhere = appendIfNotEmpty(fromBuilder, "a.`type`", type, params, needWhere);
+		needWhere = appendIfNotEmpty(fromBuilder, "a.`flag`", flag, params, needWhere);
+		needWhere = appendIfNotEmptyWithLike(fromBuilder, " a.title", keyword, params, needWhere);
+		needWhere = appendIfNotEmptyWithLike(fromBuilder, " a.mime_type", mime, params, needWhere);
+
 		if (StringUtils.isNotBlank(month)) {
 			needWhere = appendWhereOrAnd(fromBuilder, needWhere);
 			fromBuilder.append(" DATE_FORMAT( a.created, \"%Y-%m\" ) = ? ");
 			params.add(month);
 		}
 
-		if (StringUtils.isNotBlank(mime)) {
-			needWhere = appendWhereOrAnd(fromBuilder, needWhere);
-			fromBuilder.append(" a.mime_type like ? ");
-			params.add(mime + "%");
-		}
-		
-		
-		fromBuilder.append(" ORDER BY a.created DESC ");
+		buildOrderBy(orderBy, fromBuilder);
 
 		if (params.isEmpty()) {
 			return DAO.paginate(pageNumber, pageSize, "SELECT * ", fromBuilder.toString());
 		} else {
 			return DAO.paginate(pageNumber, pageSize, "SELECT * ", fromBuilder.toString(), params.toArray());
+		}
+
+	}
+
+	public List<Attachment> findList(BigInteger userId, BigInteger contentId, String type, String flag, String keyword,
+			String month, String mime, String orderBy) {
+
+		StringBuilder sqlBuilder = new StringBuilder("SELECT *  FROM attachment a ");
+		LinkedList<Object> params = new LinkedList<Object>();
+
+		boolean needWhere = true;
+
+		needWhere = appendIfNotEmpty(sqlBuilder, "a.user_id", userId, params, needWhere);
+		needWhere = appendIfNotEmpty(sqlBuilder, "a.content_id", contentId, params, needWhere);
+		needWhere = appendIfNotEmpty(sqlBuilder, "a.`type`", type, params, needWhere);
+		needWhere = appendIfNotEmpty(sqlBuilder, "a.`flag`", flag, params, needWhere);
+		needWhere = appendIfNotEmptyWithLike(sqlBuilder, " a.title", keyword, params, needWhere);
+		needWhere = appendIfNotEmptyWithLike(sqlBuilder, " a.mime_type", mime, params, needWhere);
+
+		if (StringUtils.isNotBlank(month)) {
+			needWhere = appendWhereOrAnd(sqlBuilder, needWhere);
+			sqlBuilder.append(" DATE_FORMAT( a.created, \"%Y-%m\" ) = ? ");
+			params.add(month);
+		}
+
+		buildOrderBy(orderBy, sqlBuilder);
+
+		if (params.isEmpty()) {
+			return DAO.find(sqlBuilder.toString());
+		} else {
+			return DAO.find(sqlBuilder.toString(), params.toArray());
+		}
+
+	}
+
+	public Attachment findFirst(BigInteger userId, BigInteger contentId, String type, String flag, String keyword,
+			String month, String mime, String orderBy) {
+
+		StringBuilder sqlBuilder = new StringBuilder("SELECT *  FROM attachment a ");
+		LinkedList<Object> params = new LinkedList<Object>();
+
+		boolean needWhere = true;
+
+		needWhere = appendIfNotEmpty(sqlBuilder, "a.user_id", userId, params, needWhere);
+		needWhere = appendIfNotEmpty(sqlBuilder, "a.content_id", contentId, params, needWhere);
+		needWhere = appendIfNotEmpty(sqlBuilder, "a.`type`", type, params, needWhere);
+		needWhere = appendIfNotEmpty(sqlBuilder, "a.`flag`", flag, params, needWhere);
+		needWhere = appendIfNotEmptyWithLike(sqlBuilder, " a.title", keyword, params, needWhere);
+		needWhere = appendIfNotEmptyWithLike(sqlBuilder, " a.mime_type", mime, params, needWhere);
+
+		if (StringUtils.isNotBlank(month)) {
+			needWhere = appendWhereOrAnd(sqlBuilder, needWhere);
+			sqlBuilder.append(" DATE_FORMAT( a.created, \"%Y-%m\" ) = ? ");
+			params.add(month);
+		}
+
+		buildOrderBy(orderBy, sqlBuilder);
+
+		if (params.isEmpty()) {
+			return DAO.findFirst(sqlBuilder.toString());
+		} else {
+			return DAO.findFirst(sqlBuilder.toString(), params.toArray());
+		}
+
+	}
+
+	protected void buildOrderBy(String orderBy, StringBuilder fromBuilder) {
+
+		if (StringUtils.isBlank(orderBy)) {
+			fromBuilder.append(" ORDER BY a.created DESC");
+			return;
+		}
+
+		// maybe orderby == "order_number desc";
+		String orderbyInfo[] = orderBy.trim().split("\\s+");
+		orderBy = orderbyInfo[0];
+
+		if ("id".equals(orderBy)) {
+			fromBuilder.append(" ORDER BY a.id ");
+		}
+
+		else if ("user_id".equals(orderBy)) {
+			fromBuilder.append(" ORDER BY a.user_id ");
+		}
+
+		else if ("content_id".equals(orderBy)) {
+			fromBuilder.append(" ORDER BY a.content_id ");
+		}
+
+		else if ("order_number".equals(orderBy)) {
+			fromBuilder.append(" ORDER BY a.order_number ");
+		}
+
+		else {
+			fromBuilder.append(" ORDER BY a.created ");
+		}
+
+		if (orderbyInfo.length == 1) {
+			fromBuilder.append(" DESC ");
+		} else {
+			fromBuilder.append(orderbyInfo[1]);
 		}
 
 	}

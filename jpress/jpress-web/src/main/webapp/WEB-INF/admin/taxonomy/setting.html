@@ -1,4 +1,4 @@
-<#include "../_inc/_layout.html"/> 
+<#include "../_inc/_layer_layout.html"/> 
 <#macro script>
 function doSubmit(){
  	$("#form").ajaxSubmit({
@@ -6,9 +6,10 @@ function doSubmit(){
 			dataType : "json", 
 			success : function(data) { 
 				if(data.errorCode == 0){
-					location.reload();
+					parent.reload = true;
+					parent.layer.closeAll(); 
 				}else{
-					toastr.error(data.message,'操作失败');
+					alert(data.message);
 				}
 			},
 			error : function() {
@@ -16,15 +17,7 @@ function doSubmit(){
 			}
 	});
  }
- 
- $(document).ready(function(){
-  	$("#password").show();
-});
-
 </#macro>
-<@layout active_id=p child_active_id=c>
+<@layout >
 <#include include/>
 </@layout>
-
-
-

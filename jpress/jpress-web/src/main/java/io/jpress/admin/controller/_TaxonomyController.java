@@ -81,7 +81,7 @@ public class _TaxonomyController extends JBaseCRUDController<Taxonomy> {
 			ModelSorter.sort(page.getList());
 			setAttr("page", page);
 		} else if (TplTaxonomyType.TYPE_INPUT.equals(type.getFormType())) {
-			Page<Taxonomy> page = TaxonomyQuery.me().doPaginate(getPageNumbere(), getPageSize(), getContentModule(),
+			Page<Taxonomy> page = TaxonomyQuery.me().doPaginate(getPageNumber(), getPageSize(), getContentModule(),
 					getType());
 			setAttr("page", page);
 		}
@@ -89,6 +89,17 @@ public class _TaxonomyController extends JBaseCRUDController<Taxonomy> {
 		setAttr("module", module);
 		setAttr("type", type);
 		setAttr("taxonomys", taxonomys);
+
+		String templateHtml = String.format("admin_taxonomy_index_%s_%s.html", moduleName, getType());
+		for (int i = 0; i < 3; i++) {
+			if (TemplateManager.me().existsFile(templateHtml)) {
+				setAttr("include", TemplateManager.me().currentTemplatePath() + "/" + templateHtml);
+				return;
+			}
+			templateHtml = templateHtml.substring(0, templateHtml.lastIndexOf("_")) + ".html";
+		}
+
+		setAttr("include", "_index_include.html");
 	}
 
 	public void save() {
@@ -183,7 +194,7 @@ public class _TaxonomyController extends JBaseCRUDController<Taxonomy> {
 		}
 	}
 
-	public void set_layer() {
+	public void setting() {
 		String moduleName = getContentModule();
 		TplModule module = TemplateManager.me().currentTemplateModule(moduleName);
 		TplTaxonomyType type = module.getTaxonomyTypeByType(getType());
@@ -192,20 +203,31 @@ public class _TaxonomyController extends JBaseCRUDController<Taxonomy> {
 		Taxonomy taxonomy = TaxonomyQuery.me().findById(id);
 		setAttr("taxonomy", taxonomy);
 		setAttr("type", type);
+
+		String templateHtml = String.format("admin_taxonomy_setting_%s_%s.html", moduleName, getType());
+		for (int i = 0; i < 3; i++) {
+			if (TemplateManager.me().existsFile(templateHtml)) {
+				setAttr("include", TemplateManager.me().currentTemplatePath() + "/" + templateHtml);
+				return;
+			}
+			templateHtml = templateHtml.substring(0, templateHtml.lastIndexOf("_")) + ".html";
+		}
+		setAttr("include", "_setting_include.html");
 	}
 
-	public void set_layer_save() {
+	@Before(UCodeInterceptor.class)
+	public void doSaveSettings() {
+
+		final Map<String, String> metas = getMetas();
 		final Taxonomy taxonomy = getModel(Taxonomy.class);
 
 		boolean saved = Db.tx(new IAtom() {
-
 			@Override
 			public boolean run() throws SQLException {
 				if (!taxonomy.saveOrUpdate()) {
 					return false;
 				}
 
-				Map<String, String> metas = getMetas();
 				if (metas != null) {
 					for (Map.Entry<String, String> entry : metas.entrySet()) {
 						taxonomy.saveOrUpdateMetadta(entry.getKey(), entry.getValue());
@@ -216,13 +238,9 @@ public class _TaxonomyController extends JBaseCRUDController<Taxonomy> {
 			}
 		});
 
-		if (saved)
-
-		{
+		if (saved) {
 			renderAjaxResultForSuccess();
-		} else
-
-		{
+		} else {
 			renderAjaxResultForError();
 		}
 
